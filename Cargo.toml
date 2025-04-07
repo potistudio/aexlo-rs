@@ -2,3 +2,8 @@
 name = "aexlo-rs"
 version = "0.1.0"
 edition = "2021"
+
+[dependencies]
+after-effects-sys = "0.2.1"
+dlopen = "0.1.8"
+dlopen_derive = "0.1.4"
