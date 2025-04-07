@@ -14,7 +14,7 @@ pub struct TestInData {
 }
 
 #[derive(WrapperApi)]
-pub struct TestDllApi<> {
+pub struct TestDllApi {
 	Add: fn (a: i32, b: i32) -> i32,
 	CallSub: fn (in_data: &TestInData) -> i32,
 }
@@ -32,7 +32,6 @@ fn call_test_dll() {
 
 
 	//* Apply Callback and Call
-	// let test_sub_result: i32 = container.CallSub (&TestInData { Sub: None });  // expect "STATUS_ACCESS_VIOLATION"
 	let test_sub_result: i32 = container.CallSub (&TestInData {  // expect 1
 		sub: Some (test_sub_fn)
 	});
