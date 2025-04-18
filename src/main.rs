@@ -10,6 +10,7 @@ const MODULE_NAME: &str = "Add";
 
 extern "C" fn test_sub_fn (a: i32, b: i32) -> i32 { a - b }
 
+#[repr(C)]
 pub struct TestInData {
 	pub sub: Option<unsafe extern "C" fn (a: i32, b: i32) -> i32>,
 }
@@ -45,9 +46,8 @@ fn call_test_dll() {
 
 
 	//* Apply Callback and Call
-	let test_sub_result: i32 = container.CallSub (&TestInData {  // expect 1
-		sub: Some (test_sub_fn)
-	});
+	let in_data: TestInData = TestInData { sub: Some(test_sub_fn) };
+	let test_sub_result: i32 = container.CallSub (&in_data);
 
 	println! ("Call Sub result: {}", test_sub_result);
 }
