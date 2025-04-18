@@ -5,7 +5,7 @@ extern crate dlopen_derive;
 
 use dlopen::wrapper::{ Container, WrapperApi };
 
-const MODULE_NAME: &str = "../Add.dll";
+const MODULE_NAME: &str = "Add";
 
 extern "C" fn test_sub_fn (a: i32, b: i32) -> i32 { a - b }
 
@@ -20,9 +20,21 @@ pub struct TestDllApi {
 }
 
 fn call_test_dll() {
+	let mut module_path: String = String::from("");  // default format is windows dll
+	let os = std::env::consts::OS;
+
+	match os {
+		"windows" => { module_path = format!("{}.dll", MODULE_NAME); },
+		"macos" => { module_path = format!("{}.plugin/Contents/MacOS/{}", MODULE_NAME, MODULE_NAME); },
+		_ => { eprintln!("Cannot detect os") },
+	};
+
+	println!("<aexlo> [INFO]  - Detected OS: {}", os);
+	println! ("<aexlo> [INFO]  - Loading library: {} from {}", MODULE_NAME, module_path);
+
 	//* Load DLL
 	let container: Container<TestDllApi> = unsafe {
-		Container::load (MODULE_NAME)
+		Container::load (module_path)
 	}.expect ("Cannot load library");
 
 
