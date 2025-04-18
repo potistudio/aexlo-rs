@@ -5,6 +5,7 @@ extern crate dlopen_derive;
 
 use dlopen::wrapper::{ Container, WrapperApi };
 
+const BASE_PATH: &str = "./test";
 const MODULE_NAME: &str = "Add";
 
 extern "C" fn test_sub_fn (a: i32, b: i32) -> i32 { a - b }
@@ -24,8 +25,8 @@ fn call_test_dll() {
 	let os = std::env::consts::OS;
 
 	match os {
-		"windows" => { module_path = format!("{}.dll", MODULE_NAME); },
-		"macos" => { module_path = format!("{}.plugin/Contents/MacOS/{}", MODULE_NAME, MODULE_NAME); },
+		"windows" => { module_path = format!("{}/{}.dll", BASE_PATH, MODULE_NAME); },
+		"macos" => { module_path = format!("{}/{}.plugin/Contents/MacOS/{}", BASE_PATH, MODULE_NAME, MODULE_NAME); },
 		_ => { eprintln!("Cannot detect os") },
 	};
 
