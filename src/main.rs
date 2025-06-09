@@ -78,11 +78,11 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		_ => { eprintln!("Cannot detect os") },
 	};
 
-	println!("<aexlo> [INFO]  - Detected OS: {}", os);
-	println! ("<aexlo> [INFO]  - Loading library: {} from {}", MODULE_NAME, module_path);
+	println!("[INFO] - Detected OS: {}", os);
+	println! ("[INFO] - Loading library: {} from {}", MODULE_NAME, module_path);
 
 	// Initialize Cmd
-	let cmd = after_effects_sys::PF_Cmd_ABOUT;  // About
+	let cmd = after_effects_sys::PF_Cmd_GLOBAL_SETUP;
 
 	// Initialize Interact Callbacks
 	let interact_callbacks = after_effects_sys::PF_InteractCallbacks {
@@ -100,7 +100,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	};
 
 	// Initialize InData
-	let in_data = after_effects_sys::PF_InData {
+	let mut in_data = after_effects_sys::PF_InData {
 		inter:           interact_callbacks,
 		utils:           std::ptr::null_mut(),
 		effect_ref:      std::ptr::null_mut(),
@@ -142,7 +142,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	};
 
 	// Initialize OutData
-	let out_data = after_effects_sys::PF_OutData {
+	let mut out_data = after_effects_sys::PF_OutData {
 		my_version: 0,
 		name: [0; 32],
 		global_data: std::ptr::null_mut(),
@@ -162,10 +162,11 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	};
 
 	// Initialize Params
-	let params: Vec<after_effects_sys::PF_ParamDef> = vec![];
+	let raw_params: Vec<after_effects_sys::PF_ParamDef> = Vec::new();
+	let mut params: after_effects_sys::PF_ParamList = raw_params.as_ptr() as after_effects_sys::PF_ParamList;
 
 	// Initialize Layer
-	let layer = after_effects_sys::PF_LayerDef {
+	let mut layer = after_effects_sys::PF_LayerDef {
 		reserved0: std::ptr::null_mut(),
 		reserved1: std::ptr::null_mut(),
 		world_flags: after_effects_sys::PF_NewWorldFlag_NONE,
@@ -184,13 +185,22 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		reserved_long3: 0,
 		dephault: 0,
 	};
+	println! ("[INFO] - Plugin parameters initialized");
 
 	// Load DLL
 	let container: Container<EffectMain> = unsafe {
 		Container::load (module_path)
 	}.expect ("Cannot load library");
+	println! ("[INFO] - Plugin loaded successfully");
 
 	// Call Entry Point
+	println! ("[DEBUG] - OutData::my_version (before): {}", out_data.my_version);
+	println! ("[INFO] - Calling EffectMain with cmd: {:?}", cmd);
+	unsafe {
+		let result: after_effects_sys::PF_Err = container.EffectMain(cmd, &mut in_data, &mut out_data, params, &mut layer, std::ptr::null_mut());  // expect 0
+		println! ("[DEBUG] - Result: {}", result);
+	}
+	println! ("[DEBUG] - OutData::my_version (after): {}", out_data.my_version);
 
 	Ok(())
 }
