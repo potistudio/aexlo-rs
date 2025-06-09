@@ -70,13 +70,11 @@ pub struct EffectMain {
 fn call_plugin() -> Result<(), dlopen::Error> {
 
 	// Detect OS
-	let mut module_path: String = String::from("");  // default format is windows dll
 	let os = std::env::consts::OS;
-
-	match os {
-		"windows" => { module_path = format!("{}/{}.aex", BASE_PATH, MODULE_NAME); },
-		"macos" => { module_path = format!("{}/{}.plugin/Contents/MacOS/{}", BASE_PATH, MODULE_NAME, MODULE_NAME); },
-		_ => { eprintln!("Cannot detect os") },
+	let module_path = match os {
+		"windows" => format! ("{}/{}.aex", BASE_PATH, MODULE_NAME),
+		"macos" => format! ("{}/{}.plugin/Contents/MacOS/{}", BASE_PATH, MODULE_NAME, MODULE_NAME),
+		_ => { panic!("Cannot detect OS. Supported OS is windows and macos.") },
 	};
 
 	println!("[INFO] - Detected OS: {}", os);
