@@ -117,7 +117,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		total_time:      0,
 		local_time_step: 0,
 		time_scale:      0,
-		field:           after_effects_sys::PF_Field_UPPER,
+		field:           after_effects_sys::PF_Field_UPPER as i32,
 		shutter_angle:   0,
 		width:           1920,
 		height:          1080,
@@ -127,7 +127,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		downsample_x:    after_effects_sys::PF_RationalScale { num: 1, den: 0 },
 		downsample_y:    after_effects_sys::PF_RationalScale { num: 1, den: 0 },
 		pixel_aspect_ratio: after_effects_sys::PF_RationalScale { num: 1, den: 0 },
-		in_flags:        after_effects_sys::PF_InFlag_NONE,
+		in_flags:        after_effects_sys::PF_InFlag_NONE as i32,
 		global_data :    std::ptr::null_mut(),
 		sequence_data:   std::ptr::null_mut(),
 		frame_data:      std::ptr::null_mut(),
@@ -153,12 +153,12 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		width: 0,
 		height: 0,
 		origin: after_effects_sys::PF_Point { h: 0, v: 0 },
-		out_flags: after_effects_sys::PF_OutFlag_NONE,
+		out_flags: after_effects_sys::PF_OutFlag_NONE as i32,
 		return_msg: [0; 256],
 		start_sampL: 0,
 		dur_sampL: 0,
 		dest_snd: after_effects_sys::PF_SoundWorld { fi: after_effects_sys::PF_SoundFormatInfo { rateF: 1024.0, num_channels: 0, format: 16, sample_size: 1024 }, num_samples: 1024, dataP: std::ptr::null_mut() },
-		out_flags2: after_effects_sys::PF_OutFlag2_NONE,
+		out_flags2: after_effects_sys::PF_OutFlag2_NONE as i32,
 	};
 
 	// Initialize Params
@@ -169,7 +169,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	let mut layer = after_effects_sys::PF_LayerDef {
 		reserved0: std::ptr::null_mut(),
 		reserved1: std::ptr::null_mut(),
-		world_flags: after_effects_sys::PF_NewWorldFlag_NONE,
+		world_flags: after_effects_sys::PF_NewWorldFlag_NONE as i32,
 		data: std::ptr::null_mut(),
 		rowbytes: 0,
 		width: 0,
@@ -197,7 +197,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	println! ("[DEBUG] - OutData::my_version (before): {}", out_data.my_version);
 	println! ("[INFO] - Calling EffectMain with cmd: {:?}", cmd);
 	unsafe {
-		let result: after_effects_sys::PF_Err = container.EffectMain(cmd, &mut in_data, &mut out_data, params, &mut layer, std::ptr::null_mut());  // expect 0
+		let result: after_effects_sys::PF_Err = container.EffectMain(cmd as i32, &mut in_data, &mut out_data, params, &mut layer, std::ptr::null_mut());  // expect 0
 		println! ("[DEBUG] - Result: {}", result);
 	}
 	println! ("[DEBUG] - OutData::my_version (after): {}", out_data.my_version);
