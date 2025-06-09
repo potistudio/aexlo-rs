@@ -6,7 +6,7 @@ extern crate dlopen_derive;
 use dlopen::wrapper::{ Container, WrapperApi };
 
 const BASE_PATH: &str = "./test";
-const MODULE_NAME: &str = "Add";
+const MODULE_NAME: &str = "SDK_Noise";
 
 extern "C" fn test_sub_fn (a: i32, b: i32) -> i32 { a - b }
 
@@ -53,6 +53,18 @@ fn call_test_dll() {
 }
 
 
+#[derive(WrapperApi)]
+pub struct EffectMain {
+	EffectMain: unsafe extern "C" fn (
+		cmd: after_effects_sys::PF_Cmd,
+		in_data: *mut after_effects_sys::PF_InData,
+		out_data: *mut after_effects_sys::PF_OutData,
+		params: after_effects_sys::PF_ParamList,
+		output: *mut after_effects_sys::PF_LayerDef,
+		extra: *mut ::std::os::raw::c_void,
+	) -> after_effects_sys::PF_Err,
+}
+
 //* Call the plugin entry point *//
 fn call_plugin() -> Result<(), dlopen::Error> {
 
@@ -61,7 +73,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	let os = std::env::consts::OS;
 
 	match os {
-		"windows" => { module_path = format!("{}/{}.dll", BASE_PATH, MODULE_NAME); },
+		"windows" => { module_path = format!("{}/{}.aex", BASE_PATH, MODULE_NAME); },
 		"macos" => { module_path = format!("{}/{}.plugin/Contents/MacOS/{}", BASE_PATH, MODULE_NAME, MODULE_NAME); },
 		_ => { eprintln!("Cannot detect os") },
 	};
@@ -174,6 +186,9 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	};
 
 	// Load DLL
+	let container: Container<EffectMain> = unsafe {
+		Container::load (module_path)
+	}.expect ("Cannot load library");
 
 	// Call Entry Point
 
@@ -183,7 +198,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 
 fn main() {
 	// call_test_dll();
-	call_plugin().unwrap();
+	call_plugin().expect("Failed to call plugin");
 
-	println! ("Hello, world!");
+	println! ("Hello, World!");
 }
