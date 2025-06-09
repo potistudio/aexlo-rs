@@ -28,7 +28,7 @@ fn call_test_dll() {
 	match os {
 		"windows" => { module_path = format!("{}/{}.dll", BASE_PATH, MODULE_NAME); },
 		"macos" => { module_path = format!("{}/{}.plugin/Contents/MacOS/{}", BASE_PATH, MODULE_NAME, MODULE_NAME); },
-		_ => { eprintln!("Cannot detect os") },
+		_ => { panic!("Cannot detect OS. Supported OS are 'windows' and 'macos'."); },
 	};
 
 	println!("<aexlo> [INFO]  - Detected OS: {}", os);
