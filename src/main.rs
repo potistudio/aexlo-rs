@@ -104,7 +104,8 @@ unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const 
 		if !arg1.is_null() {
 			let c_result = CString::new(result).unwrap();
 			let bytes = c_result.as_bytes_with_nul();
-			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, bytes.len().min(256));
+			let copy_len = bytes.len().min(BUFFER_SIZE); // Ensure we do not exceed the buffer size
+			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, copy_len);
 		}
 	}
 
