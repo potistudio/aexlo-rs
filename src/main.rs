@@ -1,57 +1,80 @@
+#![feature(c_variadic)]
+
 extern crate dlopen;
 
 #[macro_use]
 extern crate dlopen_derive;
 
 use dlopen::wrapper::{ Container, WrapperApi };
+use std::ffi::{CStr, CString};
 
 const BASE_PATH: &str = "./test";
 const MODULE_NAME: &str = "SDK_Noise";
 
-//* Examples */
-// extern "C" fn test_sub_fn (a: i32, b: i32) -> i32 { a - b }
+unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, mut args: ...) -> i32 {
+	unsafe {
+		const BUFFER_SIZE: usize = 256;
 
-// #[repr(C)]
-// pub struct TestInData {
-// 	pub sub: Option<unsafe extern "C" fn (a: i32, b: i32) -> i32>,
-// }
+		let format_str = CStr::from_ptr(arg2 as *const i8).to_string_lossy();
 
-// #[derive(WrapperApi)]
-// pub struct TestDllApi {
-// 	Add: fn (a: i32, b: i32) -> i32,
-// 	CallSub: fn (in_data: &TestInData) -> i32,
-// }
+		// Simple implementation to handle %d and %s format specifiers
+		let mut result = String::new();
+		let mut chars = format_str.chars().peekable();
 
-// fn call_test_dll() {
-// 	let mut module_path: String = String::from("");  // default format is windows dll
-// 	let os = std::env::consts::OS;
+		while let Some(c) = chars.next() {
+			if c == '%' {
+				if let Some(next) = chars.next() {
+					match next {
+						'd' => {
+							// Get an integer argument
+							let arg = args.arg::<i32>();
+							result.push_str(&arg.to_string());
+						},
+						's' => {
+							// Get a string argument
+							let ptr = args.arg::<*const i8>();
+							if !ptr.is_null() {
+								let s = CStr::from_ptr(ptr).to_string_lossy();
+								result.push_str(&s);
+							} else {
+								result.push_str("(null)");
+							}
+						},
+						'%' => {
+							result.push('%');
+						},
+						_ => {
+							// Unsupported format specifier, just include it as-is
+							result.push('%');
+							result.push(next);
+						}
+					}
+				}
+			} else {
+				result.push(c);
+			}
+		}
 
-// 	match os {
-// 		"windows" => { module_path = format!("{}/{}.dll", BASE_PATH, MODULE_NAME); },
-// 		"macos" => { module_path = format!("{}/{}.plugin/Contents/MacOS/{}", BASE_PATH, MODULE_NAME, MODULE_NAME); },
-// 		_ => { panic!("Cannot detect OS. Supported OS are 'windows' and 'macos'."); },
-// 	};
+		println!("sprintf called with format: {:?}, result: {:?}", format_str, result);
 
-// 	println!("<aexlo> [INFO]  - Detected OS: {}", os);
-// 	println! ("<aexlo> [INFO]  - Loading library: {} from {}", MODULE_NAME, module_path);
+		// Copy result to the output buffer
+		if !arg1.is_null() {
+			let c_result = match CString::new(result) {
+				Ok(s) => s,
+				Err(_nul_error) => {
+			        // Log the error, e.g., using eprintln! or a proper logging setup.
+			        // eprintln!("[sprintf] Error: Formatted string contains NUL bytes: {}", _nul_error);
+			        // Return an error code to indicate failure.
+			        return after_effects_sys::PF_Err_INTERNAL_STRUCT_DAMAGED as i32; // Or another suitable PF_Err_ code
+				}
+			};
+			let bytes = c_result.as_bytes_with_nul();
+			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, bytes.len().min(BUFFER_SIZE));
+		}
+	}
 
-// 	//* Load DLL
-// 	let container: Container<TestDllApi> = unsafe {
-// 		Container::load (module_path)
-// 	}.expect ("Cannot load library");
-
-
-// 	//* Call Function
-// 	let test_add_result: i32 = container.Add (1, 2);  // expect 3
-// 	println! ("Add result: {}", test_add_result);
-
-
-// 	//* Apply Callback and Call
-// 	let in_data: TestInData = TestInData { sub: Some(test_sub_fn) };
-// 	let test_sub_result: i32 = container.CallSub (&in_data);
-
-// 	println! ("Call Sub result: {}", test_sub_result);
-// }
+	after_effects_sys::PF_Err_NONE as i32
+}
 
 
 #[derive(WrapperApi)]
@@ -81,7 +104,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	println! ("[INFO] - Loading library: {} from {}", MODULE_NAME, module_path);
 
 	// Initialize Cmd
-	let cmd = after_effects_sys::PF_Cmd_GLOBAL_SETUP;
+	let cmd = after_effects_sys::PF_Cmd_ABOUT;
 
 	// Initialize Interact Callbacks
 	let interact_callbacks = after_effects_sys::PF_InteractCallbacks {
@@ -98,10 +121,90 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		reserved: [std::ptr::null_mut(); 10],
 	};
 
+	let ansi = after_effects_sys::PF_ANSICallbacks {
+		atan: None,
+		atan2: None,
+		ceil: None,
+		cos: None,
+		exp: None,
+		fabs: None,
+		floor: None,
+		fmod: None,
+		hypot: None,
+		log: None,
+		log10: None,
+		pow: None,
+		sin: None,
+		sqrt: None,
+		tan: None,
+		sprintf: Some(sprintf),
+		strcpy: None,
+		asin: None,
+		acos: None,
+		ansi_procs: [0; 1],
+	};
+
+	let color = after_effects_sys::PF_ColorCallbacks {
+		RGBtoHLS: None,
+		HLStoRGB: None,
+		RGBtoYIQ: None,
+		YIQtoRGB: None,
+		Luminance: None,
+		Hue: None,
+		Lightness: None,
+		Saturation: None,
+	};
+
+	let mut utility_callbacks = after_effects_sys::_PF_UtilCallbacks {
+		begin_sampling: None,
+		subpixel_sample: None,
+		area_sample: None,
+		get_batch_func_is_deprecated: std::ptr::null_mut(),
+		end_sampling: None,
+		composite_rect: None,
+		blend: None,
+		convolve: None,
+		copy: None,
+		fill: None,
+		gaussian_kernel: None,
+		iterate: None,
+		premultiply: None,
+		premultiply_color: None,
+		new_world: None,
+		dispose_world: None,
+		iterate_origin: None,
+		iterate_lut: None,
+		transfer_rect: None,
+		transform_world: None,
+		host_new_handle: None,
+		host_lock_handle: None,
+		host_unlock_handle: None,
+		host_dispose_handle: None,
+		get_callback_addr: None,
+		app: None,
+		ansi: ansi,
+		colorCB: color,
+		get_platform_data: None,
+		host_get_handle_size: None,
+		iterate_origin_non_clip_src: None,
+		iterate_generic: None,
+		host_resize_handle: None,
+		subpixel_sample16: None,
+		area_sample16: None,
+		fill16: None,
+		premultiply_color16: None,
+		iterate16: None,
+		iterate_origin16: None,
+		iterate_origin_non_clip_src16: None,
+		get_pixel_data8: None,
+		get_pixel_data16: None,
+		reserved: [0; 1],
+	};
+
 	// Initialize InData
 	let mut in_data = after_effects_sys::PF_InData {
 		inter:           interact_callbacks,
-		utils:           std::ptr::null_mut(),
+		utils:           &mut utility_callbacks,
 		effect_ref:      std::ptr::null_mut(),
 		quality:         after_effects_sys::PF_Quality_HI,
 		version:         after_effects_sys::PF_SpecVersion { major: 13, minor: 28 },

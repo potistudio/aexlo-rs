@@ -6,9 +6,12 @@
 		"dephault",
 		"dlopen",
 		"downsample",
+		"nonoverlapping",
+		"peekable",
 		"rowbytes",
 		"samp",
 		"sdata",
+		"sprintf",
 		"Unionable"
 	]
 }
