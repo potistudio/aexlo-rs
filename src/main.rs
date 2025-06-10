@@ -59,7 +59,15 @@ unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const 
 
 		// Copy result to the output buffer
 		if !arg1.is_null() {
-			let c_result = CString::new(result).unwrap();
+			let c_result = match CString::new(result) {
+				Ok(s) => s,
+				Err(_nul_error) => {
+			        // Log the error, e.g., using eprintln! or a proper logging setup.
+			        // eprintln!("[sprintf] Error: Formatted string contains NUL bytes: {}", _nul_error);
+			        // Return an error code to indicate failure.
+			        return after_effects_sys::PF_Err_INTERNAL_STRUCT_DAMAGED as i32; // Or another suitable PF_Err_ code
+				}
+			};
 			let bytes = c_result.as_bytes_with_nul();
 			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, bytes.len().min(BUFFER_SIZE));
 		}
