@@ -1,3 +1,5 @@
+#![feature(c_variadic)]
+
 extern crate dlopen;
 
 #[macro_use]
@@ -53,6 +55,13 @@ const MODULE_NAME: &str = "SDK_Noise";
 // 	println! ("Call Sub result: {}", test_sub_result);
 // }
 
+unsafe extern "C" fn sprintf (arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, ...) -> i32 {
+	unsafe {
+		println! ("sprintf called with arg1: {:?}, arg2: {:?}", *arg1, *arg2);
+		0  // Return a default value for i32
+	}
+}
+
 
 #[derive(WrapperApi)]
 pub struct EffectMain {
@@ -81,7 +90,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 	println! ("[INFO] - Loading library: {} from {}", MODULE_NAME, module_path);
 
 	// Initialize Cmd
-	let cmd = after_effects_sys::PF_Cmd_GLOBAL_SETUP;
+	let cmd = after_effects_sys::PF_Cmd_ABOUT;
 
 	// Initialize Interact Callbacks
 	let interact_callbacks = after_effects_sys::PF_InteractCallbacks {
@@ -98,10 +107,90 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		reserved: [std::ptr::null_mut(); 10],
 	};
 
+	let ansi = after_effects_sys::PF_ANSICallbacks {
+		atan: None,
+		atan2: None,
+		ceil: None,
+		cos: None,
+		exp: None,
+		fabs: None,
+		floor: None,
+		fmod: None,
+		hypot: None,
+		log: None,
+		log10: None,
+		pow: None,
+		sin: None,
+		sqrt: None,
+		tan: None,
+		sprintf: Some(sprintf),
+		strcpy: None,
+		asin: None,
+		acos: None,
+		ansi_procs: [0; 1],
+	};
+
+	let color = after_effects_sys::PF_ColorCallbacks {
+		RGBtoHLS: None,
+		HLStoRGB: None,
+		RGBtoYIQ: None,
+		YIQtoRGB: None,
+		Luminance: None,
+		Hue: None,
+		Lightness: None,
+		Saturation: None,
+	};
+
+	let mut utility_callbacks = after_effects_sys::_PF_UtilCallbacks {
+		begin_sampling: None,
+		subpixel_sample: None,
+		area_sample: None,
+		get_batch_func_is_deprecated: std::ptr::null_mut(),
+		end_sampling: None,
+		composite_rect: None,
+		blend: None,
+		convolve: None,
+		copy: None,
+		fill: None,
+		gaussian_kernel: None,
+		iterate: None,
+		premultiply: None,
+		premultiply_color: None,
+		new_world: None,
+		dispose_world: None,
+		iterate_origin: None,
+		iterate_lut: None,
+		transfer_rect: None,
+		transform_world: None,
+		host_new_handle: None,
+		host_lock_handle: None,
+		host_unlock_handle: None,
+		host_dispose_handle: None,
+		get_callback_addr: None,
+		app: None,
+		ansi: ansi,
+		colorCB: color,
+		get_platform_data: None,
+		host_get_handle_size: None,
+		iterate_origin_non_clip_src: None,
+		iterate_generic: None,
+		host_resize_handle: None,
+		subpixel_sample16: None,
+		area_sample16: None,
+		fill16: None,
+		premultiply_color16: None,
+		iterate16: None,
+		iterate_origin16: None,
+		iterate_origin_non_clip_src16: None,
+		get_pixel_data8: None,
+		get_pixel_data16: None,
+		reserved: [0; 1],
+	};
+
 	// Initialize InData
 	let mut in_data = after_effects_sys::PF_InData {
 		inter:           interact_callbacks,
-		utils:           std::ptr::null_mut(),
+		utils:           &mut utility_callbacks,
 		effect_ref:      std::ptr::null_mut(),
 		quality:         after_effects_sys::PF_Quality_HI,
 		version:         after_effects_sys::PF_SpecVersion { major: 13, minor: 28 },
@@ -185,6 +274,10 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 		dephault: 0,
 	};
 	println! ("[INFO] - Plugin parameters initialized");
+
+	// Inject Interact Callbacks
+	// let in_data: TestInData = TestInData { sub: Some(test_sub_fn) };
+	// let test_sub_result: i32 = container.CallSub (&in_data);
 
 	// Load DLL
 	let container: Container<EffectMain> = unsafe {
