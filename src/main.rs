@@ -6,6 +6,7 @@ extern crate dlopen;
 extern crate dlopen_derive;
 
 use dlopen::wrapper::{ Container, WrapperApi };
+use std::ffi::{CStr, CString};
 
 const BASE_PATH: &str = "./test";
 const MODULE_NAME: &str = "SDK_Noise";
@@ -55,11 +56,59 @@ const MODULE_NAME: &str = "SDK_Noise";
 // 	println! ("Call Sub result: {}", test_sub_result);
 // }
 
-unsafe extern "C" fn sprintf (arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, ...) -> i32 {
+unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, mut args: ...) -> i32 {
 	unsafe {
-		println! ("sprintf called with arg1: {:?}, arg2: {:?}", *arg1, *arg2);
-		0  // Return a default value for i32
+		let format_str = CStr::from_ptr(arg2 as *const i8).to_string_lossy();
+
+		// Simple implementation to handle %d and %s format specifiers
+		let mut result = String::new();
+		let mut chars = format_str.chars().peekable();
+
+		while let Some(c) = chars.next() {
+			if c == '%' {
+				if let Some(next) = chars.next() {
+					match next {
+						'd' => {
+							// Get an integer argument
+							let arg = args.arg::<i32>();
+							result.push_str(&arg.to_string());
+						},
+						's' => {
+							// Get a string argument
+							let ptr = args.arg::<*const i8>();
+							if !ptr.is_null() {
+								let s = CStr::from_ptr(ptr).to_string_lossy();
+								result.push_str(&s);
+							} else {
+								result.push_str("(null)");
+							}
+						},
+						'%' => {
+							result.push('%');
+						},
+						_ => {
+							// Unsupported format specifier, just include it as-is
+							result.push('%');
+							result.push(next);
+						}
+					}
+				}
+			} else {
+				result.push(c);
+			}
+		}
+
+		println!("sprintf called with format: {:?}, result: {:?}", format_str, result);
+
+		// Copy result to the output buffer
+		if !arg1.is_null() {
+			let c_result = CString::new(result).unwrap();
+			let bytes = c_result.as_bytes_with_nul();
+			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, bytes.len().min(256));
+		}
 	}
+
+	after_effects_sys::PF_Err_NONE as i32
 }
 
 
