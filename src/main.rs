@@ -13,6 +13,8 @@ const MODULE_NAME: &str = "SDK_Noise";
 
 unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, mut args: ...) -> i32 {
 	unsafe {
+		const BUFFER_SIZE: usize = 256;
+
 		let format_str = CStr::from_ptr(arg2 as *const i8).to_string_lossy();
 
 		// Simple implementation to handle %d and %s format specifiers
@@ -59,8 +61,7 @@ unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const 
 		if !arg1.is_null() {
 			let c_result = CString::new(result).unwrap();
 			let bytes = c_result.as_bytes_with_nul();
-			let copy_len = bytes.len().min(BUFFER_SIZE); // Ensure we do not exceed the buffer size
-			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, copy_len);
+			std::ptr::copy_nonoverlapping(bytes.as_ptr(), arg1 as *mut u8, bytes.len().min(BUFFER_SIZE));
 		}
 	}
 
