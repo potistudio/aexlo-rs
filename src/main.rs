@@ -1,7 +1,5 @@
 #![feature(c_variadic)]
 
-extern crate dlopen;
-
 #[macro_use]
 extern crate dlopen_derive;
 
@@ -11,7 +9,8 @@ use std::ffi::{CStr, CString};
 const BASE_PATH: &str = "./test";
 const MODULE_NAME: &str = "SDK_Noise";
 
-unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, mut args: ...) -> i32 {
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn sprintf (arg1: *mut after_effects_sys::A_char, arg2: *const after_effects_sys::A_char, mut args: ...) -> i32 {
 	unsafe {
 		const BUFFER_SIZE: usize = 256;
 
@@ -80,12 +79,12 @@ unsafe extern "C" fn sprintf(arg1: *mut after_effects_sys::A_char, arg2: *const 
 #[derive(WrapperApi)]
 pub struct EffectMain {
 	EffectMain: unsafe extern "C" fn (
-		cmd: after_effects_sys::PF_Cmd,
-		in_data: *mut after_effects_sys::PF_InData,
+		cmd:      after_effects_sys::PF_Cmd,
+		in_data:  *mut after_effects_sys::PF_InData,
 		out_data: *mut after_effects_sys::PF_OutData,
-		params: after_effects_sys::PF_ParamList,
-		output: *mut after_effects_sys::PF_LayerDef,
-		extra: *mut ::std::os::raw::c_void,
+		params:   after_effects_sys::PF_ParamList,
+		output:   *mut after_effects_sys::PF_LayerDef,
+		extra:    *mut ::std::os::raw::c_void,
 	) -> after_effects_sys::PF_Err,
 }
 
@@ -265,7 +264,7 @@ fn call_plugin() -> Result<(), dlopen::Error> {
 
 	// Initialize Params
 	let raw_params: Vec<after_effects_sys::PF_ParamDef> = Vec::new();
-	let mut params: after_effects_sys::PF_ParamList = raw_params.as_ptr() as after_effects_sys::PF_ParamList;
+	let params: after_effects_sys::PF_ParamList = raw_params.as_ptr() as after_effects_sys::PF_ParamList;
 
 	// Initialize Layer
 	let mut layer = after_effects_sys::PF_LayerDef {
